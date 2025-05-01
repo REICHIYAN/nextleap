@@ -1,0 +1,29 @@
+name: nextleap
+description: "A new Flutter project."
+publish_to: 'none'
+
+version: 1.0.0+1
+
+environment:
+  sdk: ^3.7.2
+
+dependencies:
+  flutter:
+    sdk: flutter
+  http: ^0.13.5
+  cupertino_icons: ^1.0.8
+
+  # Firebase dependencies
+  firebase_core: ^2.24.0
+  cloud_firestore: ^4.9.0
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^5.0.0
+
+flutter:
+  uses-material-design: true
+
+  # assets:（今は不要ならそのままでOK）
+  # fonts:（使う場合はここに追加）
