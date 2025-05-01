@@ -1,10 +1,14 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart' show rootBundle;
 import 'package:firebase_core/firebase_core.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'dart:convert';
 import 'package:http/http.dart' as http;
-import 'api_keys.dart';
 import 'firebase_options.dart';
+import 'api_keys.dart';
+import 'package:pdf/pdf.dart';
+import 'package:pdf/widgets.dart' as pw;
+import 'package:printing/printing.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -33,10 +37,7 @@ class HomeScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('NextLeap'),
-        centerTitle: true,
-      ),
+      appBar: AppBar(title: const Text('NextLeap'), centerTitle: true),
       body: Center(
         child: ElevatedButton(
           child: const Text('診断をスタートする'),
@@ -89,7 +90,7 @@ class _QuestionScreenState extends State<QuestionScreen> {
     List<String> answers = controllers.map((c) => c.text.trim()).toList();
     if (answers.any((ans) => ans.isEmpty)) {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('すべての質問に回答してください。')),
+        const SnackBar(content: Text('すべての質問に回答してください。')),
       );
       return;
     }
@@ -118,7 +119,12 @@ class _QuestionScreenState extends State<QuestionScreen> {
       Navigator.pop(context);
       Navigator.push(
         context,
-        MaterialPageRoute(builder: (context) => ResultScreen(result: result)),
+        MaterialPageRoute(
+          builder: (context) => ResultScreen(
+            result: result,
+            answers: answers,
+          ),
+        ),
       );
     } catch (e) {
       Navigator.pop(context);
@@ -157,9 +163,7 @@ class _QuestionScreenState extends State<QuestionScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('キャリア診断'),
-      ),
+      appBar: AppBar(title: const Text('キャリア診断')),
       body: Padding(
         padding: const EdgeInsets.all(16),
         child: ListView.builder(
@@ -210,8 +214,38 @@ class _QuestionScreenState extends State<QuestionScreen> {
 
 class ResultScreen extends StatelessWidget {
   final String result;
+  final List<String> answers;
 
-  const ResultScreen({required this.result});
+  const ResultScreen({required this.result, required this.answers});
+
+void _exportPdf(BuildContext context) async {
+  final fontData = await rootBundle.load("assets/fonts/NotoSansJP-VariableFont_wght.ttf");
+  final ttf = pw.Font.ttf(fontData.buffer.asByteData());
+
+  final pdfDoc = pw.Document();
+  pdfDoc.addPage(
+    pw.Page(
+      build: (pw.Context context) => pw.Column(
+        crossAxisAlignment: pw.CrossAxisAlignment.start,
+        children: [
+          pw.Text('NextLeap キャリア診断結果',
+              style: pw.TextStyle(font: ttf, fontSize: 24, fontWeight: pw.FontWeight.bold)),
+          pw.SizedBox(height: 16),
+          pw.Text('■ 診断結果：', style: pw.TextStyle(font: ttf)),
+          pw.Text(result, style: pw.TextStyle(font: ttf, fontSize: 16)),
+          pw.SizedBox(height: 24),
+          pw.Text('■ 回答内容：', style: pw.TextStyle(font: ttf)),
+          ...answers.map((ans) => pw.Bullet(text: ans, style: pw.TextStyle(font: ttf))),
+        ],
+      ),
+    ),
+  );
+
+  await Printing.layoutPdf(
+    onLayout: (PdfPageFormat format) async => pdfDoc.save(),
+  );
+}
+
 
   @override
   Widget build(BuildContext context) {
@@ -219,10 +253,22 @@ class ResultScreen extends StatelessWidget {
       appBar: AppBar(title: const Text('診断結果')),
       body: Padding(
         padding: const EdgeInsets.all(16),
-        child: SelectableText(
-          result,
-          style: const TextStyle(fontSize: 18),
-          textAlign: TextAlign.left,
+        child: Column(
+          children: [
+            Expanded(
+              child: SingleChildScrollView(
+                child: SelectableText(
+                  result,
+                  style: const TextStyle(fontSize: 18),
+                ),
+              ),
+            ),
+            const SizedBox(height: 16),
+            ElevatedButton(
+              onPressed: () => _exportPdf(context),
+              child: const Text('PDFで保存'),
+            ),
+          ],
         ),
       ),
     );
