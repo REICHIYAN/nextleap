@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart' show rootBundle;
 import 'package:firebase_core/firebase_core.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:google_sign_in/google_sign_in.dart';
 import 'dart:convert';
 import 'package:http/http.dart' as http;
 import 'firebase_options.dart';
@@ -9,6 +11,7 @@ import 'api_keys.dart';
 import 'package:pdf/pdf.dart';
 import 'package:pdf/widgets.dart' as pw;
 import 'package:printing/printing.dart';
+import 'package:flutter/foundation.dart' show kIsWeb;
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -17,6 +20,7 @@ void main() async {
   );
   runApp(NextLeapApp());
 }
+
 
 class NextLeapApp extends StatelessWidget {
   @override
@@ -27,11 +31,87 @@ class NextLeapApp extends StatelessWidget {
         primarySwatch: Colors.indigo,
         useMaterial3: true,
       ),
-      home: HomeScreen(),
+      home: AuthGate(),
       debugShowCheckedModeBanner: false,
     );
   }
 }
+
+class AuthGate extends StatelessWidget {
+  @override
+  Widget build(BuildContext context) {
+    return StreamBuilder<User?>(
+      stream: FirebaseAuth.instance.authStateChanges(),
+      builder: (context, snapshot) {
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          return const Scaffold(body: Center(child: CircularProgressIndicator()));
+        }
+        if (snapshot.hasData) {
+          return HomeScreen();
+        } else {
+          return LoginScreen();
+        }
+      },
+    );
+  }
+}
+
+
+class LoginScreen extends StatelessWidget {
+  Future<void> _signInAnonymously() async {
+    await FirebaseAuth.instance.signInAnonymously();
+  }
+
+  Future<void> _signInWithGoogle() async {
+    try {
+      if (kIsWeb) {
+        // Web: pop-up ログインを使う
+        final provider = GoogleAuthProvider();
+        await FirebaseAuth.instance.signInWithPopup(provider);
+      } else {
+        // モバイル: GoogleSignIn → FirebaseAuth
+        final googleUser = await GoogleSignIn().signIn();
+        final googleAuth = await googleUser?.authentication;
+
+        if (googleUser == null || googleAuth == null) return;
+
+        final credential = GoogleAuthProvider.credential(
+          accessToken: googleAuth.accessToken,
+          idToken: googleAuth.idToken,
+        );
+
+        await FirebaseAuth.instance.signInWithCredential(credential);
+      }
+    } catch (e) {
+      print('Googleログイン失敗: $e');
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(title: const Text('ログイン')),
+      body: Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            ElevatedButton(
+              onPressed: _signInAnonymously,
+              child: const Text('匿名でログイン'),
+            ),
+            const SizedBox(height: 16),
+            ElevatedButton(
+              onPressed: _signInWithGoogle,
+              child: const Text('Googleでログイン'),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+
 
 class HomeScreen extends StatelessWidget {
   @override
@@ -66,6 +146,16 @@ class HomeScreen extends StatelessWidget {
                   );
                 },
               ),
+              const SizedBox(height: 16),
+              ElevatedButton(
+                onPressed: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(builder: (_) => MyPageScreen()),
+                  );
+                },
+                child: const Text('マイページ'),
+              ),
             ],
           ),
         ),
@@ -73,6 +163,76 @@ class HomeScreen extends StatelessWidget {
     );
   }
 }
+
+class MyPageScreen extends StatelessWidget {
+  @override
+  Widget build(BuildContext context) {
+    final String uid = FirebaseAuth.instance.currentUser?.uid ?? '';
+    print('ログイン中のUID: $uid'); // ← ここに追加！
+
+    if (uid.isEmpty) {
+      return const Scaffold(
+        body: Center(child: Text('ログイン情報が見つかりません')),
+      );
+    }
+
+    return Scaffold(
+      appBar: AppBar(title: const Text('マイページ')),
+      body: StreamBuilder<QuerySnapshot>(
+        stream: FirebaseFirestore.instance
+            .collection('diagnoses')
+            .where('uid', isEqualTo: uid)
+            .orderBy('timestamp', descending: true)
+            .snapshots(),
+        builder: (context, snapshot) {
+          if (snapshot.connectionState == ConnectionState.waiting) {
+            return const Center(child: CircularProgressIndicator());
+          }
+          if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
+            return const Center(child: Text('診断履歴がありません'));
+          }
+
+          final docs = snapshot.data!.docs;
+
+          return ListView.builder(
+            padding: const EdgeInsets.all(16),
+            itemCount: docs.length,
+            itemBuilder: (context, index) {
+              final doc = docs[index];
+              final result = doc['result'] as String;
+              final answers = List<String>.from(doc['answers'] ?? []);
+              final type = doc['type'] as String;
+              final date = (doc['timestamp'] as Timestamp).toDate();
+
+              return Card(
+                margin: const EdgeInsets.symmetric(vertical: 8),
+                child: ListTile(
+                  title: Text('${date.toLocal()}'.split(' ')[0]),
+                  subtitle: Text(result.length > 50 ? '${result.substring(0, 50)}...' : result),
+                  trailing: const Icon(Icons.arrow_forward_ios),
+                  onTap: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (_) => ResultScreen(
+                          result: result,
+                          answers: answers,
+                          type: type,
+                        ),
+                      ),
+                    );
+                  },
+                ),
+              );
+            },
+          );
+        },
+      ),
+    );
+  }
+}
+
+
 
 class QuestionScreen extends StatefulWidget {
   @override
@@ -144,8 +304,10 @@ class _QuestionScreenState extends State<QuestionScreen> {
 
     try {
       final result = await sendToOpenAI(prompt);
+      final uid = FirebaseAuth.instance.currentUser?.uid;
 
       await FirebaseFirestore.instance.collection('diagnoses').add({
+        'uid': uid,
         'timestamp': Timestamp.now(),
         'answers': List<String>.from(answerTexts),
         'type': topType,
