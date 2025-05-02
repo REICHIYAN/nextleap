@@ -36,17 +36,38 @@ class NextLeapApp extends StatelessWidget {
 class HomeScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
+    final screenWidth = MediaQuery.of(context).size.width;
+    final isMobile = screenWidth < 600;
+
     return Scaffold(
       appBar: AppBar(title: const Text('NextLeap'), centerTitle: true),
       body: Center(
-        child: ElevatedButton(
-          child: const Text('診断をスタートする'),
-          onPressed: () {
-            Navigator.push(
-              context,
-              MaterialPageRoute(builder: (context) => QuestionScreen()),
-            );
-          },
+        child: Padding(
+          padding: EdgeInsets.all(isMobile ? 24 : 48),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Text(
+                'あなたのキャリアタイプを診断しよう',
+                style: TextStyle(fontSize: isMobile ? 20 : 28, fontWeight: FontWeight.bold),
+                textAlign: TextAlign.center,
+              ),
+              const SizedBox(height: 32),
+              ElevatedButton(
+                style: ElevatedButton.styleFrom(
+                  padding: EdgeInsets.symmetric(horizontal: 24, vertical: isMobile ? 12 : 16),
+                  textStyle: TextStyle(fontSize: isMobile ? 16 : 20),
+                ),
+                child: const Text('診断をスタートする'),
+                onPressed: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(builder: (context) => QuestionScreen()),
+                  );
+                },
+              ),
+            ],
+          ),
         ),
       ),
     );
@@ -138,6 +159,7 @@ class _QuestionScreenState extends State<QuestionScreen> {
           builder: (context) => ResultScreen(
             result: result,
             answers: List<String>.from(answerTexts),
+            type: topType,
           ),
         ),
       );
@@ -177,6 +199,9 @@ class _QuestionScreenState extends State<QuestionScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final screenWidth = MediaQuery.of(context).size.width;
+    final isMobile = screenWidth < 600;
+
     if (questions.isEmpty) {
       return const Scaffold(body: Center(child: CircularProgressIndicator()));
     }
@@ -184,7 +209,7 @@ class _QuestionScreenState extends State<QuestionScreen> {
     return Scaffold(
       appBar: AppBar(title: const Text('キャリア診断')),
       body: ListView.builder(
-        padding: const EdgeInsets.all(16),
+        padding: EdgeInsets.all(isMobile ? 12 : 24),
         itemCount: questions.length + 1,
         itemBuilder: (context, index) {
           if (index < questions.length) {
@@ -197,12 +222,12 @@ class _QuestionScreenState extends State<QuestionScreen> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(q['text'], style: const TextStyle(fontSize: 16)),
+                    Text(q['text'], style: TextStyle(fontSize: isMobile ? 16 : 18)),
                     const SizedBox(height: 12),
                     ...List.generate(q['answers'].length, (i) {
                       final answer = q['answers'][i];
                       return RadioListTile<int>(
-                        title: Text(answer['text']),
+                        title: Text(answer['text'], style: TextStyle(fontSize: isMobile ? 14 : 16)),
                         value: i,
                         groupValue: selectedAnswers[index],
                         onChanged: (int? val) {
@@ -222,7 +247,7 @@ class _QuestionScreenState extends State<QuestionScreen> {
               child: Center(
                 child: ElevatedButton(
                   onPressed: handleSubmit,
-                  child: const Text('診断する'),
+                  child: Text('診断する', style: TextStyle(fontSize: isMobile ? 16 : 18)),
                 ),
               ),
             );
@@ -236,8 +261,31 @@ class _QuestionScreenState extends State<QuestionScreen> {
 class ResultScreen extends StatelessWidget {
   final String result;
   final List<String> answers;
+  final String type;
 
-  const ResultScreen({required this.result, required this.answers});
+  const ResultScreen({required this.result, required this.answers, required this.type});
+
+  String getTypeLabel(String key) {
+    const labels = {
+      'analyzer': '分析型',
+      'creator': '創造型',
+      'leader': '指導型',
+      'helper': '支援型',
+      'adventurer': '冒険型',
+    };
+    return labels[key] ?? '未分類';
+  }
+
+  Color getTypeColor(String key) {
+    const colors = {
+      'analyzer': Colors.blue,
+      'creator': Colors.purple,
+      'leader': Colors.red,
+      'helper': Colors.green,
+      'adventurer': Colors.orange,
+    };
+    return colors[key] ?? Colors.grey;
+  }
 
   void _exportPdf(BuildContext context) async {
     final fontData = await rootBundle.load("assets/fonts/NotoSansJP-VariableFont_wght.ttf");
@@ -252,6 +300,8 @@ class ResultScreen extends StatelessWidget {
             pw.Text('NextLeap キャリア診断結果',
                 style: pw.TextStyle(font: ttf, fontSize: 24, fontWeight: pw.FontWeight.bold)),
             pw.SizedBox(height: 16),
+            pw.Text('■ 診断タイプ：${getTypeLabel(type)}', style: pw.TextStyle(font: ttf)),
+            pw.SizedBox(height: 8),
             pw.Text('■ 診断結果：', style: pw.TextStyle(font: ttf)),
             pw.Text(result, style: pw.TextStyle(font: ttf, fontSize: 16)),
             pw.SizedBox(height: 24),
@@ -269,17 +319,38 @@ class ResultScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final typeLabel = getTypeLabel(type);
+    final typeColor = getTypeColor(type);
+    final screenWidth = MediaQuery.of(context).size.width;
+    final isMobile = screenWidth < 600;
+
     return Scaffold(
       appBar: AppBar(title: const Text('診断結果')),
       body: Padding(
-        padding: const EdgeInsets.all(16),
+        padding: EdgeInsets.all(isMobile ? 12 : 24),
         child: Column(
           children: [
+            Container(
+              padding: EdgeInsets.symmetric(horizontal: isMobile ? 10 : 14, vertical: 6),
+              decoration: BoxDecoration(
+                color: typeColor.withOpacity(0.2),
+                borderRadius: BorderRadius.circular(20),
+              ),
+              child: Text(
+                'あなたのタイプ：$typeLabel',
+                style: TextStyle(
+                  fontSize: isMobile ? 16 : 20,
+                  fontWeight: FontWeight.bold,
+                  color: typeColor,
+                ),
+              ),
+            ),
+            const SizedBox(height: 16),
             Expanded(
               child: SingleChildScrollView(
                 child: SelectableText(
                   result,
-                  style: const TextStyle(fontSize: 18),
+                  style: TextStyle(fontSize: isMobile ? 14 : 18),
                 ),
               ),
             ),

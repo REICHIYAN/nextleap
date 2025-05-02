@@ -71,3 +71,7 @@ android/key.properties
 build/
 
 .metadata
+
+
+web/manifest.json  
+web/index.html  
