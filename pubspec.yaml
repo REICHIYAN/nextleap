@@ -26,3 +26,9 @@ flutter:
 
   assets:
     - assets/fonts/NotoSansJP-VariableFont_wght.ttf
+    - assets/questions.json
+
+  fonts:
+    - family: NotoSansJP
+      fonts:
+        - asset: assets/fonts/NotoSansJP-VariableFont_wght.ttf

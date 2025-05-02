@@ -1,0 +1,112 @@
+{
+    "types": {
+      "analyzer": { "label": "分析型", "score": 0 },
+      "creator": { "label": "創造型", "score": 0 },
+      "leader": { "label": "指導型", "score": 0 },
+      "helper": { "label": "支援型", "score": 0 },
+      "adventurer": { "label": "冒険型", "score": 0 }
+    },
+    "questions": [
+      {
+        "id": "q1",
+        "text": "自由に使える1日があったら？",
+        "answers": [
+          { "text": "本を読んで静かに過ごす", "tags": ["analyzer"] },
+          { "text": "新しい趣味を試してみる", "tags": ["creator", "adventurer"] },
+          { "text": "誰かと話して過ごす", "tags": ["helper"] },
+          { "text": "イベントを企画する", "tags": ["leader"] }
+        ]
+      },
+      {
+        "id": "q2",
+        "text": "グループでの役割は？",
+        "answers": [
+          { "text": "全体をまとめるリーダー", "tags": ["leader"] },
+          { "text": "裏方でサポートする", "tags": ["helper"] },
+          { "text": "新しいアイデアを出す", "tags": ["creator"] },
+          { "text": "課題を細かく分析する", "tags": ["analyzer"] }
+        ]
+      },
+      {
+        "id": "q3",
+        "text": "仕事でやりがいを感じるのは？",
+        "answers": [
+          { "text": "目標達成に向けてチームを引っ張る時", "tags": ["leader"] },
+          { "text": "誰かの役に立てたとき", "tags": ["helper"] },
+          { "text": "自分のアイデアが形になった時", "tags": ["creator"] },
+          { "text": "複雑な課題を解決したとき", "tags": ["analyzer"] }
+        ]
+      },
+      {
+        "id": "q4",
+        "text": "旅行に行くなら？",
+        "answers": [
+          { "text": "自然豊かな場所でリラックス", "tags": ["helper", "analyzer"] },
+          { "text": "世界遺産や博物館を巡る", "tags": ["analyzer"] },
+          { "text": "現地でアクティビティに挑戦", "tags": ["adventurer"] },
+          { "text": "気の合う仲間と盛り上がる旅", "tags": ["leader", "creator"] }
+        ]
+      },
+      {
+        "id": "q5",
+        "text": "将来の夢は？",
+        "answers": [
+          { "text": "自分のビジネスを持つ", "tags": ["leader", "creator"] },
+          { "text": "人の役に立つ仕事を続ける", "tags": ["helper"] },
+          { "text": "研究や専門知識で社会に貢献", "tags": ["analyzer"] },
+          { "text": "世界を旅しながら働く", "tags": ["adventurer"] }
+        ]
+      },
+      {
+        "id": "q6",
+        "text": "得意なことは？",
+        "answers": [
+          { "text": "人と話して信頼関係を築く", "tags": ["helper"] },
+          { "text": "アイデアを思いつく", "tags": ["creator"] },
+          { "text": "論理的に考える", "tags": ["analyzer"] },
+          { "text": "人前で話す・まとめる", "tags": ["leader"] }
+        ]
+      },
+      {
+        "id": "q7",
+        "text": "好きな授業・科目は？",
+        "answers": [
+          { "text": "数学・理科", "tags": ["analyzer"] },
+          { "text": "美術・音楽・デザイン", "tags": ["creator"] },
+          { "text": "体育・冒険活動", "tags": ["adventurer"] },
+          { "text": "道徳・社会・心理学", "tags": ["helper"] }
+        ]
+      },
+      {
+        "id": "q8",
+        "text": "友人にどんな人だと思われている？",
+        "answers": [
+          { "text": "冷静で知的", "tags": ["analyzer"] },
+          { "text": "ムードメーカー", "tags": ["leader", "adventurer"] },
+          { "text": "思いやりがある", "tags": ["helper"] },
+          { "text": "ユニークな発想の持ち主", "tags": ["creator"] }
+        ]
+      },
+      {
+        "id": "q9",
+        "text": "休日の過ごし方は？",
+        "answers": [
+          { "text": "図書館やカフェで勉強", "tags": ["analyzer"] },
+          { "text": "DIYや作品作り", "tags": ["creator"] },
+          { "text": "友達とおしゃべり", "tags": ["helper"] },
+          { "text": "登山やアウトドア", "tags": ["adventurer"] }
+        ]
+      },
+      {
+        "id": "q10",
+        "text": "何かに挑戦するときの気持ちは？",
+        "answers": [
+          { "text": "事前にじっくり調べる", "tags": ["analyzer"] },
+          { "text": "とりあえずやってみる", "tags": ["adventurer"] },
+          { "text": "まず周囲に相談", "tags": ["helper"] },
+          { "text": "やるなら勝ちに行く", "tags": ["leader"] }
+        ]
+      }
+    ]
+  }
+  

@@ -59,47 +59,61 @@ class QuestionScreen extends StatefulWidget {
 }
 
 class _QuestionScreenState extends State<QuestionScreen> {
-  final List<String> questions = [
-    'あなたが得意だと感じることは？',
-    'あなたが働く上で大事にしたいことは？',
-    'チームワークと個人作業、どちらが得意？',
-    'どんな業界に興味がある？',
-    '将来、どんな働き方をしていたい？',
-  ];
-
-  late List<TextEditingController> controllers;
+  List<dynamic> questions = [];
+  Map<String, int> scores = {};
+  List<int?> selectedAnswers = [];
 
   @override
   void initState() {
     super.initState();
-    controllers = List.generate(
-      questions.length,
-      (index) => TextEditingController(),
-    );
+    loadQuestions();
   }
 
-  @override
-  void dispose() {
-    for (var controller in controllers) {
-      controller.dispose();
+  Future<void> loadQuestions() async {
+    final jsonString = await rootBundle.loadString('assets/questions.json');
+    final data = json.decode(jsonString);
+    setState(() {
+      questions = data['questions'];
+      selectedAnswers = List.filled(questions.length, null);
+      for (var type in data['types'].keys) {
+        scores[type] = 0;
+      }
+    });
+  }
+
+  void handleAnswer(List<String> tags) {
+    for (var tag in tags) {
+      scores[tag] = (scores[tag] ?? 0) + 1;
     }
-    super.dispose();
   }
 
   Future<void> handleSubmit() async {
-    List<String> answers = controllers.map((c) => c.text.trim()).toList();
-    if (answers.any((ans) => ans.isEmpty)) {
+    if (selectedAnswers.contains(null)) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('すべての質問に回答してください。')),
       );
       return;
     }
 
-    String prompt = '';
+    scores.updateAll((key, value) => 0);
     for (int i = 0; i < questions.length; i++) {
-      prompt += '${questions[i]}\n${answers[i]}\n\n';
+      final selectedIndex = selectedAnswers[i]!;
+      final tags = List<String>.from(questions[i]['answers'][selectedIndex]['tags']);
+      handleAnswer(tags);
     }
-    prompt += '上記の回答をもとに、ユーザーに向いているキャリアタイプを200文字以内で説明してください。';
+
+    final topType = scores.entries.reduce((a, b) => a.value >= b.value ? a : b).key;
+    final answerTexts = [
+      for (int i = 0; i < questions.length; i++)
+        questions[i]['answers'][selectedAnswers[i]!]['text']
+    ];
+
+    final prompt = '''
+以下の質問と回答に基づいて、ユーザーの適性を診断してください。
+診断タイプ: $topType
+回答内容: ${answerTexts.join(', ')}
+200文字以内で解説してください。
+''';
 
     showDialog(
       context: context,
@@ -112,7 +126,8 @@ class _QuestionScreenState extends State<QuestionScreen> {
 
       await FirebaseFirestore.instance.collection('diagnoses').add({
         'timestamp': Timestamp.now(),
-        'answers': answers,
+        'answers': List<String>.from(answerTexts),
+        'type': topType,
         'result': result,
       });
 
@@ -122,7 +137,7 @@ class _QuestionScreenState extends State<QuestionScreen> {
         MaterialPageRoute(
           builder: (context) => ResultScreen(
             result: result,
-            answers: answers,
+            answers: List<String>.from(answerTexts),
           ),
         ),
       );
@@ -162,51 +177,57 @@ class _QuestionScreenState extends State<QuestionScreen> {
 
   @override
   Widget build(BuildContext context) {
+    if (questions.isEmpty) {
+      return const Scaffold(body: Center(child: CircularProgressIndicator()));
+    }
+
     return Scaffold(
       appBar: AppBar(title: const Text('キャリア診断')),
-      body: Padding(
+      body: ListView.builder(
         padding: const EdgeInsets.all(16),
-        child: ListView.builder(
-          itemCount: questions.length + 1,
-          itemBuilder: (context, index) {
-            if (index < questions.length) {
-              return Card(
-                margin: const EdgeInsets.symmetric(vertical: 8),
-                child: Padding(
-                  padding: const EdgeInsets.all(16),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        questions[index],
-                        style: const TextStyle(fontSize: 16),
-                      ),
-                      const SizedBox(height: 8),
-                      TextField(
-                        controller: controllers[index],
-                        decoration: const InputDecoration(
-                          border: OutlineInputBorder(),
-                          hintText: 'ここに入力してください',
-                        ),
-                        maxLines: null,
-                      ),
-                    ],
-                  ),
+        itemCount: questions.length + 1,
+        itemBuilder: (context, index) {
+          if (index < questions.length) {
+            final q = questions[index];
+
+            return Card(
+              margin: const EdgeInsets.symmetric(vertical: 8),
+              child: Padding(
+                padding: const EdgeInsets.all(16),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(q['text'], style: const TextStyle(fontSize: 16)),
+                    const SizedBox(height: 12),
+                    ...List.generate(q['answers'].length, (i) {
+                      final answer = q['answers'][i];
+                      return RadioListTile<int>(
+                        title: Text(answer['text']),
+                        value: i,
+                        groupValue: selectedAnswers[index],
+                        onChanged: (int? val) {
+                          setState(() {
+                            selectedAnswers[index] = val;
+                          });
+                        },
+                      );
+                    }),
+                  ],
                 ),
-              );
-            } else {
-              return Padding(
-                padding: const EdgeInsets.symmetric(vertical: 16),
-                child: Center(
-                  child: ElevatedButton(
-                    onPressed: handleSubmit,
-                    child: const Text('診断する'),
-                  ),
+              ),
+            );
+          } else {
+            return Padding(
+              padding: const EdgeInsets.symmetric(vertical: 16),
+              child: Center(
+                child: ElevatedButton(
+                  onPressed: handleSubmit,
+                  child: const Text('診断する'),
                 ),
-              );
-            }
-          },
-        ),
+              ),
+            );
+          }
+        },
       ),
     );
   }
@@ -218,34 +239,33 @@ class ResultScreen extends StatelessWidget {
 
   const ResultScreen({required this.result, required this.answers});
 
-void _exportPdf(BuildContext context) async {
-  final fontData = await rootBundle.load("assets/fonts/NotoSansJP-VariableFont_wght.ttf");
-  final ttf = pw.Font.ttf(fontData.buffer.asByteData());
+  void _exportPdf(BuildContext context) async {
+    final fontData = await rootBundle.load("assets/fonts/NotoSansJP-VariableFont_wght.ttf");
+    final ttf = pw.Font.ttf(fontData.buffer.asByteData());
 
-  final pdfDoc = pw.Document();
-  pdfDoc.addPage(
-    pw.Page(
-      build: (pw.Context context) => pw.Column(
-        crossAxisAlignment: pw.CrossAxisAlignment.start,
-        children: [
-          pw.Text('NextLeap キャリア診断結果',
-              style: pw.TextStyle(font: ttf, fontSize: 24, fontWeight: pw.FontWeight.bold)),
-          pw.SizedBox(height: 16),
-          pw.Text('■ 診断結果：', style: pw.TextStyle(font: ttf)),
-          pw.Text(result, style: pw.TextStyle(font: ttf, fontSize: 16)),
-          pw.SizedBox(height: 24),
-          pw.Text('■ 回答内容：', style: pw.TextStyle(font: ttf)),
-          ...answers.map((ans) => pw.Bullet(text: ans, style: pw.TextStyle(font: ttf))),
-        ],
+    final pdfDoc = pw.Document();
+    pdfDoc.addPage(
+      pw.Page(
+        build: (pw.Context context) => pw.Column(
+          crossAxisAlignment: pw.CrossAxisAlignment.start,
+          children: [
+            pw.Text('NextLeap キャリア診断結果',
+                style: pw.TextStyle(font: ttf, fontSize: 24, fontWeight: pw.FontWeight.bold)),
+            pw.SizedBox(height: 16),
+            pw.Text('■ 診断結果：', style: pw.TextStyle(font: ttf)),
+            pw.Text(result, style: pw.TextStyle(font: ttf, fontSize: 16)),
+            pw.SizedBox(height: 24),
+            pw.Text('■ 回答内容：', style: pw.TextStyle(font: ttf)),
+            ...answers.map((ans) => pw.Bullet(text: ans, style: pw.TextStyle(font: ttf))),
+          ],
+        ),
       ),
-    ),
-  );
+    );
 
-  await Printing.layoutPdf(
-    onLayout: (PdfPageFormat format) async => pdfDoc.save(),
-  );
-}
-
+    await Printing.layoutPdf(
+      onLayout: (PdfPageFormat format) async => pdfDoc.save(),
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
