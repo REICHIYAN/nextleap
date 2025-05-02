@@ -1,16 +1,32 @@
-# nextleap
+# NextLeap 🧭
 
-A new Flutter project.
+**NextLeap** is a career diagnosis app built with Flutter that helps users discover their professional strengths and ideal career types through simple, guided questions.
 
-## Getting Started
+## 🚀 Features
 
-This project is a starting point for a Flutter application.
+- 🔍 **Career diagnosis** based on multiple-choice questions
+- 🎨 **Responsive UI** optimized for both desktop and mobile
+- 🌈 **Personality-type labels** (e.g. Analyzer, Creator, Leader)
+- 🖨️ **PDF export** of diagnosis results
+- 🔒 **Data saving via Firebase Firestore**
+- 🧩 **Installable as a PWA** (Progressive Web App)
 
-A few resources to get you started if this is your first Flutter project:
+## 🛠️ Tech Stack
 
-- [Lab: Write your first Flutter app](https://docs.flutter.dev/get-started/codelab)
-- [Cookbook: Useful Flutter samples](https://docs.flutter.dev/cookbook)
+- **Flutter Web**
+- **Firebase Firestore**
+- **OpenAI GPT-3.5 API**
+- **PDF & Printing libraries**
+- **PWA support** (manifest + service worker)
 
-For help getting started with Flutter development, view the
-[online documentation](https://docs.flutter.dev/), which offers tutorials,
-samples, guidance on mobile development, and a full API reference.
+## 📸 Screenshots
+
+| Home | Diagnosis | Result |
+|------|-----------|--------|
+| _Insert Screenshot_ | _Insert Screenshot_ | _Insert Screenshot_ |
+
+## 🔧 How to Run Locally
+
+```bash
+flutter pub get
+flutter run -d chrome
